@@ -1,0 +1,209 @@
+\documentclass[11pt]{article}
+\usepackage[margin=1in]{geometry}
+\usepackage{amsmath,amssymb}
+\usepackage{booktabs}
+\newcommand{\ket}[1]{\lvert #1\rangle}
+\title{Matrix Product States: Construction and Storage}
+\author{}
+\date{}
+\begin{document}
+\maketitle
+\noindent Accompanies examples \texttt{05\_matrix\_product\_states.py}
+and \texttt{06\_mps\_comparison.py}.
+
+\section{Three-spin coefficient tensor}
+
+In the ordered local basis $\ket{0}=\ket{\uparrow}$,
+$\ket{1}=\ket{\downarrow}$,
+\begin{equation}
+    \ket{\psi}=\sum_{i,j,k=0}^{1}C_{ijk}
+    \ket{i}\otimes\ket{j}\otimes\ket{k},
+    \qquad \sum_{ijk}|C_{ijk}|^2=1.
+\end{equation}
+For the GHZ state,
+\begin{equation}
+    \ket{\psi}=\frac{\ket{000}+\ket{111}}{\sqrt2},
+    \qquad C_{000}=C_{111}=\frac1{\sqrt2},
+\end{equation}
+with all other coefficients zero.
+
+\section{First SVD: partition $1\mid23$}
+
+Group $(j,k)$ into the column index $q=2j+k$:
+\begin{equation}
+    M_{i,q}=C_{ijk},\qquad
+    M=\begin{pmatrix}
+        C_{000}&C_{001}&C_{010}&C_{011}\\
+        C_{100}&C_{101}&C_{110}&C_{111}
+    \end{pmatrix}
+    =\frac1{\sqrt2}\begin{pmatrix}1&0&0&0\\0&0&0&1\end{pmatrix}.
+\end{equation}
+Reshaping changes only the indexing. Apply the reduced SVD:
+\begin{equation}
+    M=U^{[1]}\Sigma^{[1]}V^{[1]\dagger},\qquad
+    M_{iq}=\sum_{\alpha=0}^{\chi_1-1}
+    U^{[1]}_{i\alpha}s^{[1]}_\alpha
+    (V^{[1]\dagger})_{\alpha q}.
+\end{equation}
+Define the first site tensor and the remainder:
+\begin{equation}
+    A^{[1]}_{i\alpha}=U^{[1]}_{i\alpha},\qquad
+    R_{\alpha q}=s^{[1]}_\alpha(V^{[1]\dagger})_{\alpha q}.
+\end{equation}
+Thus
+\begin{equation}
+    \boxed{C_{ijk}=M_{i,2j+k}
+    =\sum_\alpha A^{[1]}_{i\alpha}R_{\alpha,2j+k}.}
+\end{equation}
+The corresponding Schmidt form is
+\begin{align}
+    \ket{\psi}&=\sum_\alpha s^{[1]}_\alpha
+    \ket{a_\alpha}_1\otimes\ket{b_\alpha}_{23},\\
+    \ket{a_\alpha}_1&=\sum_i U^{[1]}_{i\alpha}\ket{i},
+    &\ket{b_\alpha}_{23}&=\sum_{jk}
+    (V^{[1]\dagger})_{\alpha,2j+k}\ket{jk}.
+\end{align}
+The index $\alpha$ labels Schmidt terms, not a physical spin.
+
+For GHZ, $\chi_1=2$ and $s^{[1]}_0=s^{[1]}_1=1/\sqrt2$.
+One valid choice is
+\begin{equation}
+    A^{[1]}=I_2,\qquad
+    R=\frac1{\sqrt2}\begin{pmatrix}1&0&0&0\\0&0&0&1\end{pmatrix}.
+\end{equation}
+
+\section{Second SVD: partition $12\mid3$}
+
+Regroup the remainder: $(\alpha,j)$ labels rows, and $k$ labels columns.
+\begin{equation}
+    M^{[2]}_{2\alpha+j,k}=R_{\alpha,2j+k}.
+\end{equation}
+For the choice above,
+\begin{equation}
+    M^{[2]}=
+    \begin{pmatrix}
+        R_{0,0}&R_{0,1}\\R_{0,2}&R_{0,3}\\
+        R_{1,0}&R_{1,1}\\R_{1,2}&R_{1,3}
+    \end{pmatrix}
+    =\frac1{\sqrt2}\begin{pmatrix}1&0\\0&0\\0&0\\0&1\end{pmatrix}.
+\end{equation}
+Apply the second SVD:
+\begin{equation}
+    M^{[2]}_{2\alpha+j,k}
+    =\sum_{\beta=0}^{\chi_2-1}U^{[2]}_{2\alpha+j,\beta}
+    s^{[2]}_\beta(V^{[2]\dagger})_{\beta k}.
+\end{equation}
+Separate the row index of $U^{[2]}$ and absorb the singular values
+into the final tensor:
+\begin{equation}
+    A^{[2]}_{\alpha j\beta}=U^{[2]}_{2\alpha+j,\beta},\qquad
+    A^{[3]}_{\beta k}=s^{[2]}_\beta(V^{[2]\dagger})_{\beta k}.
+\end{equation}
+Then
+\begin{align}
+    R_{\alpha,2j+k}&=\sum_\beta
+    A^{[2]}_{\alpha j\beta}A^{[3]}_{\beta k},\\
+    C_{ijk}&=\sum_{\alpha,\beta}
+    A^{[1]}_{i\alpha}A^{[2]}_{\alpha j\beta}A^{[3]}_{\beta k}.
+\end{align}
+Since $A^{[1]\dagger}A^{[1]}=I$, the index $\alpha$ represents
+an orthonormal basis on the retained spin-1 subspace. The second
+SVD therefore gives the Schmidt coefficients across $12\mid3$.
+
+\subsection*{Tensor dimensions}
+
+\begin{center}
+\begin{tabular}{lll}
+\toprule
+Tensor & Shape & Indices\\
+\midrule
+$A^{[1]}$ & $(2,\chi_1)$ & $i,\alpha$\\
+$A^{[2]}$ & $(\chi_1,2,\chi_2)$ & $\alpha,j,\beta$\\
+$A^{[3]}$ & $(\chi_2,2)$ & $\beta,k$\\
+\bottomrule
+\end{tabular}
+\end{center}
+The physical indices are $i,j,k$; the internal bond indices are
+$\alpha,\beta$. For GHZ, $\chi_1=\chi_2=2$.
+
+\section{Explicit GHZ representation}
+
+A compatible pair of SVDs gives
+\begin{equation}
+    A^{[1]}=I_2,\qquad
+    A^{[2]}_{:,0,:}=\begin{pmatrix}1&0\\0&0\end{pmatrix},\qquad
+    A^{[2]}_{:,1,:}=\begin{pmatrix}0&0\\0&1\end{pmatrix},\qquad
+    A^{[3]}=\frac{I_2}{\sqrt2}.
+\end{equation}
+The colon denotes all values of the corresponding index.
+For fixed $i,j,k$, the bond sums are matrix multiplication:
+\begin{equation}
+    \boxed{C_{ijk}=A^{[1]}_{i,:}\,A^{[2]}_{:,j,:}\,A^{[3]}_{:,k}.}
+\end{equation}
+For example,
+\begin{align}
+    C_{000}&=\begin{pmatrix}1&0\end{pmatrix}
+    \begin{pmatrix}1&0\\0&0\end{pmatrix}
+    \frac1{\sqrt2}\begin{pmatrix}1\\0\end{pmatrix}
+    =\frac1{\sqrt2},\\
+    C_{001}&=\begin{pmatrix}1&0\end{pmatrix}
+    \begin{pmatrix}1&0\\0&0\end{pmatrix}
+    \frac1{\sqrt2}\begin{pmatrix}0\\1\end{pmatrix}=0.
+\end{align}
+More generally,
+\begin{equation}
+    C_{ijk}=\frac{\delta_{ij}\delta_{jk}}{\sqrt2},\qquad
+    \ket{\psi}=\frac{\ket{000}+\ket{111}}{\sqrt2}.
+\end{equation}
+Degenerate singular values allow different Schmidt bases. Individual
+SVD factors need not match these matrices; their contraction must agree.
+
+\section{Bond dimensions and storage}
+
+With zero singular values removed, the minimum exact bond dimensions are
+\begin{equation}
+    \chi_1=\operatorname{rank}C_{i,(jk)},\qquad
+    \chi_2=\operatorname{rank}C_{(ij),k}.
+\end{equation}
+Keeping all nonzero singular values preserves every amplitude.
+In floating-point calculations, numerical zeros require a tolerance.
+
+Dense array storage for three spins is
+\begin{equation}
+    N_{\mathrm{full}}=8,\qquad
+    N_{\mathrm{MPS}}=2\chi_1+2\chi_1\chi_2+2\chi_2.
+\end{equation}
+For GHZ, $N_{\mathrm{MPS}}=16$: this example demonstrates factorization,
+not a storage reduction.
+
+For $N$ spins, successive SVDs give
+\begin{equation}
+    C_{i_1\cdots i_N}
+    =\sum_{\alpha_1,\ldots,\alpha_{N-1}}
+    A^{[1]}_{i_1\alpha_1}
+    A^{[2]}_{\alpha_1i_2\alpha_2}\cdots
+    A^{[N]}_{\alpha_{N-1}i_N}.
+\end{equation}
+With $\chi_0=\chi_N=1$,
+\begin{equation}
+    N_{\mathrm{MPS}}=\sum_{n=1}^{N}2\chi_{n-1}\chi_n,
+    \qquad N_{\mathrm{full}}=2^N.
+\end{equation}
+Bounded bond dimensions give linear storage in $N$.
+For GHZ, $\chi_n=2$ at every internal cut and
+$N_{\mathrm{MPS}}=8N-8$ for $N\geq2$.
+
+\subsection*{Why SVD}
+
+At any single cut, retaining the largest $\chi$ singular values gives
+\begin{equation}
+    M_\chi=\sum_{\alpha=0}^{\chi-1}s_\alpha u_\alpha v_\alpha^\dagger,
+    \qquad
+    \|M-M_\chi\|_F^2=\sum_{\alpha\geq\chi}s_\alpha^2.
+\end{equation}
+This minimizes the Frobenius error among matrices of rank at most $\chi$.
+Zero singular values permit exact compression; small singular values
+permit controlled approximation. Successive truncations need not give
+the globally optimal MPS at fixed bond dimensions.
+
+\end{document}

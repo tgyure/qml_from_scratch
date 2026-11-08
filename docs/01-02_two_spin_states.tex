@@ -1,0 +1,66 @@
+\documentclass[11pt]{article}
+\usepackage[margin=1in]{geometry}
+\usepackage{amsmath,amssymb}
+\newcommand{\ket}[1]{\lvert #1\rangle}
+\title{Two-Spin States and Coefficient Matrices}
+\author{}
+\date{}
+\begin{document}
+\maketitle
+\noindent Accompanies examples \texttt{01\_two\_spin\_states.py} and
+\texttt{02\_coefficient\_matrices.py}.
+
+\section*{States and basis ordering}
+For one spin, choose
+\[
+\ket{\uparrow}=\begin{pmatrix}1\\0\end{pmatrix},
+\qquad
+\ket{\downarrow}=\begin{pmatrix}0\\1\end{pmatrix},
+\qquad
+\ket{+}=\frac{\ket{\uparrow}+\ket{\downarrow}}{\sqrt{2}}.
+\]
+The tensor product uses the ordered basis
+$\{\ket{\uparrow\uparrow},\ket{\uparrow\downarrow},
+\ket{\downarrow\uparrow},\ket{\downarrow\downarrow}\}$.
+Thus the two normalized states in example 01 are
+\[
+\ket{\psi_{\mathrm{prod}}}=\ket{+}\otimes\ket{\uparrow}
+=\frac{1}{\sqrt{2}}\begin{pmatrix}1\\0\\1\\0\end{pmatrix},
+\qquad
+\ket{\psi_{\mathrm{Bell}}}
+=\frac{\ket{\uparrow\uparrow}+\ket{\downarrow\downarrow}}{\sqrt{2}}
+=\frac{1}{\sqrt{2}}\begin{pmatrix}1\\0\\0\\1\end{pmatrix}.
+\]
+Their norm squared is $\sum_{ij}|C_{ij}|^2=1$, computed with
+\texttt{np.vdot}, which conjugates its first argument.
+
+\section*{Reshaping and separability}
+Write a general state as
+\[
+\ket{\psi}=\sum_{i,j\in\{\uparrow,\downarrow\}}C_{ij}
+\ket{i}\otimes\ket{j}.
+\]
+With this basis ordering, \texttt{state.reshape(2, 2)} gives
+\[
+C=\begin{pmatrix}
+C_{\uparrow\uparrow}&C_{\uparrow\downarrow}\\
+C_{\downarrow\uparrow}&C_{\downarrow\downarrow}
+\end{pmatrix}.
+\]
+If $\ket{\psi}=\ket{a}\otimes\ket{b}$, then $C_{ij}=a_i b_j$,
+so $C=ab^{\mathsf T}$ has rank one. Conversely, any nonzero rank-one
+matrix factors this way and therefore represents a product state.
+There is no complex conjugation in this outer product:
+it is \texttt{np.outer(a, b)}, not $ab^\dagger$.
+For the two examples,
+\[
+C_{\mathrm{prod}}=\frac{1}{\sqrt{2}}
+\begin{pmatrix}1&0\\1&0\end{pmatrix},
+\qquad
+C_{\mathrm{Bell}}=\frac{1}{\sqrt{2}}
+\begin{pmatrix}1&0\\0&1\end{pmatrix}.
+\]
+Their ranks are one and two, respectively: the first state is separable,
+whereas the Bell state is entangled. This rank criterion applies to pure
+bipartite states.
+\end{document}
