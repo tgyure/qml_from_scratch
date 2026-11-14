@@ -1,157 +1,165 @@
 \documentclass[11pt]{article}
-\usepackage[margin=1in]{geometry}
+\usepackage[margin=0.85in]{geometry}
 \usepackage{amsmath,amssymb}
+\usepackage{xcolor,listings}
+\usepackage{hyperref}
+\hypersetup{colorlinks=true,linkcolor=blue}
+\lstset{language=Python,basicstyle=\ttfamily\small,columns=fullflexible,
+ keepspaces=true,showstringspaces=false,backgroundcolor=\color{black!3},
+ frame=single,rulecolor=\color{black!15},aboveskip=7pt,belowskip=7pt}
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{5pt}
 \newcommand{\ket}[1]{\lvert #1\rangle}
 \newcommand{\bra}[1]{\langle #1\rvert}
-\newcommand{\Tr}{\operatorname{Tr}}
-\title{Schmidt Decomposition and Truncation}
-\author{}
-\date{}
+\newcommand{\mtwo}[4]{\begin{pmatrix}#1&#2\\#3&#4\end{pmatrix}}
+\newcommand{\vfour}[4]{\begin{pmatrix}#1\\#2\\#3\\#4\end{pmatrix}}
+\newcommand{\heading}[1]{\begin{center}\large\textit{#1}\end{center}}
 \begin{document}
-\maketitle
-\noindent Accompanies examples \texttt{03\_schmidt\_decomposition.py} and
-\texttt{04\_schmidt\_truncation.py}. All states below are initially normalized;
-entropies are measured in bits.
 
-\section{From the SVD to the Schmidt decomposition}
-For a bipartite pure state,
-\[
-\ket{\psi}=\sum_{ij}C_{ij}\ket{i}_A\otimes\ket{j}_B,
-\qquad
-\sum_{ij}|C_{ij}|^2=1.
-\]
-Take the singular value decomposition
-$C=U\Sigma V^\dagger$, with singular values
-$s_1\geq s_2\geq\cdots\geq0$. Entry by entry,
-\[
-C_{ij}=\sum_\alpha U_{i\alpha}s_\alpha(V^\dagger)_{\alpha j}
-=\sum_\alpha s_\alpha U_{i\alpha}V^*_{j\alpha}.
-\]
-Defining
-\[
-\ket{a_\alpha}=\sum_i U_{i\alpha}\ket{i}_A,
-\qquad
-\ket{b_\alpha}=\sum_j V^*_{j\alpha}\ket{j}_B
-\]
-therefore gives the Schmidt decomposition
-\[
-\boxed{\ket{\psi}=\sum_{\alpha=1}^{r}
-s_\alpha\ket{a_\alpha}\otimes\ket{b_\alpha}},
-\qquad
-\sum_{\alpha=1}^{r}s_\alpha^2=1.
-\]
-Both sets of vectors are orthonormal, and $r=\operatorname{rank}C$
-is the Schmidt rank. A state is a product state precisely when $r=1$.
+\heading{Schmidt Decomposition and Truncation}
+\textit{Examples 03 and 04}
 
-NumPy returns \texttt{U, s, Vh}, where \texttt{Vh} is $V^\dagger$.
-The coefficient vectors used in example 03 are therefore
-\texttt{U[:, alpha]} and \texttt{Vh[alpha, :]}. The latter is a row
-of $V^\dagger$ used as a one-dimensional array of ket coefficients;
-it must not be conjugated again.
+\subsection*{1. From SVD to Schmidt decomposition}
+Begin with a normalized state and factor its coefficient matrix:
+\begin{equation}
+\ket{\psi}=\sum_{ij}C_{ij}\ket{i}_A\ket{j}_B,
+\qquad C=U\Sigma V^\dagger,\qquad s_1\geq s_2\geq\cdots\geq0.
+\end{equation}
+Substituting gives
+\begin{align}
+C_{ij}&=\sum_\alpha U_{i\alpha}s_\alpha(V^\dagger)_{\alpha j}
+=\sum_\alpha s_\alpha U_{i\alpha}V_{j\alpha}^*,\\
+\ket{\psi}&=\sum_\alpha s_\alpha
+\underbrace{\left(\sum_i U_{i\alpha}\ket{i}_A\right)}_{\ket{a_\alpha}}
+\otimes\underbrace{\left(\sum_j V_{j\alpha}^*\ket{j}_B\right)}_{\ket{b_\alpha}}.
+\end{align}
+Since $U^\dagger U=V^\dagger V=I$ on the retained columns,
+\begin{equation}
+\langle a_\alpha|a_\beta\rangle
+=\langle b_\alpha|b_\beta\rangle=\delta_{\alpha\beta},
+\qquad \ket{\psi}=\sum_{\alpha=1}^r s_\alpha\ket{a_\alpha}\ket{b_\alpha},
+\qquad\sum_\alpha s_\alpha^2=1.
+\end{equation}
+The Schmidt rank is $r=\operatorname{rank}C$. A product state has $r=1$.
 
-\section{Reduced density matrices and entropy}
-Tracing $\ket{\psi}\bra{\psi}$ over one subsystem yields
-\begin{align*}
-(\rho_A)_{ii'}&=\sum_j C_{ij}C^*_{i'j},
-& \rho_A&=CC^\dagger,\\
-(\rho_B)_{jj'}&=\sum_i C_{ij}C^*_{ij'},
-& \rho_B&=C^{\mathsf T}C^*.
-\end{align*}
-These are exactly \texttt{C @ C.conj().T} and
-\texttt{C.T @ C.conj()} in the code.
-Substituting the Schmidt decomposition gives
-\[
-\rho_A=\sum_\alpha s_\alpha^2\ket{a_\alpha}\bra{a_\alpha},
-\qquad
-\rho_B=\sum_\alpha s_\alpha^2\ket{b_\alpha}\bra{b_\alpha}.
-\]
-The two reduced states thus have the same nonzero eigenvalues,
-$p_\alpha=s_\alpha^2$, and equal von Neumann entropies:
-\[
-\boxed{S_A=S_B=-\sum_\alpha p_\alpha\log_2 p_\alpha}.
-\]
-We define $0\log_2 0=0$. The code omits eigenvalues below a small
-numerical threshold. For the product state, $p=(1,0)$ and $S=0$;
-for the Bell state, $p=(1/2,1/2)$ and $S=1$.
+In \texttt{U, s, Vh = np.linalg.svd(C, full\_matrices=False)}, the ket coefficients are
+\begin{equation}
+\ket{a_\alpha}\ \longleftrightarrow\ \texttt{U[:, alpha]},
+\qquad \ket{b_\alpha}\ \longleftrightarrow\ \texttt{Vh[alpha, :]}.
+\end{equation}
+The row of \texttt{Vh} already contains the required conjugation.
 
-\section{Truncation, discarded weight, and fidelity}
-Keep the largest $\chi$ Schmidt coefficients without initially
-renormalizing:
-\[
-\ket{\widetilde\psi_\chi}
-=\sum_{\alpha=1}^{\chi}s_\alpha
-\ket{a_\alpha}\otimes\ket{b_\alpha},
-\qquad
-w=\sum_{\alpha>\chi}s_\alpha^2.
-\]
-Orthogonality removes all cross terms, so
-\[
-\boxed{\|\psi-\widetilde\psi_\chi\|^2=w},
-\qquad
-\|\widetilde\psi_\chi\|^2=1-w.
-\]
-The truncated SVD minimizes this squared error among coefficient
-matrices of rank at most $\chi$. For $w<1$, the normalized approximation is
-\[
+\subsection*{2. Reduced density matrices and entropy}
+Tracing over one subsystem gives
+\begin{align}
+(\rho_A)_{ii'}&=\sum_j C_{ij}C^*_{i'j},&\rho_A&=CC^\dagger,\\
+(\rho_B)_{jj'}&=\sum_i C_{ij}C^*_{ij'},&\rho_B&=C^{\mathsf T}C^*.
+\end{align}
+These are \texttt{C @ C.conj().T} and \texttt{C.T @ C.conj()}. Using the Schmidt form,
+\begin{align}
+\rho_A&=\sum_{\alpha\beta}s_\alpha s_\beta\ket{a_\alpha}\bra{a_\beta}
+\langle b_\beta|b_\alpha\rangle
+=\sum_\alpha s_\alpha^2\ket{a_\alpha}\bra{a_\alpha},\\
+\rho_B&=\sum_\alpha s_\alpha^2\ket{b_\alpha}\bra{b_\alpha}.
+\end{align}
+Both have nonzero eigenvalues $p_\alpha=s_\alpha^2$, so
+\begin{equation}
+S_A=S_B=-\sum_\alpha p_\alpha\log_2p_\alpha.
+\end{equation}
+The product state has $p=(1,0)$ and $S=0$; the Bell state has $p=(1/2,1/2)$ and $S=1$ bit. Terms with $p=0$ contribute zero; the code excludes numerical zeros.
+
+\newpage
+\subsection*{3. Truncation, discarded weight, and fidelity}
+Keep the largest $\chi$ Schmidt coefficients:
+\begin{equation}
+\ket{\widetilde\psi_\chi}=\sum_{\alpha=1}^\chi s_\alpha\ket{a_\alpha}\ket{b_\alpha},
+\qquad w=\sum_{\alpha>\chi}s_\alpha^2.
+\end{equation}
+Orthogonality gives
+\begin{align}
+\|\psi-\widetilde\psi_\chi\|^2
+&=\left\|\sum_{\alpha>\chi}s_\alpha\ket{a_\alpha}\ket{b_\alpha}\right\|^2
+=\sum_{\alpha>\chi}s_\alpha^2=w,\\
+\langle\widetilde\psi_\chi|\widetilde\psi_\chi\rangle
+&=\sum_{\alpha\leq\chi}s_\alpha^2=1-w.
+\end{align}
+The truncated SVD minimizes this error among coefficient matrices of rank at most $\chi$.
+
+Normalize the truncated state:
+\begin{equation}
 \ket{\phi_\chi}=\frac{\ket{\widetilde\psi_\chi}}{\sqrt{1-w}}.
-\]
-Since $\langle\psi|\widetilde\psi_\chi\rangle=1-w$, the squared-overlap
-convention for fidelity gives
-\[
-\boxed{F=|\langle\psi|\phi_\chi\rangle|^2=1-w}.
-\]
-The distance after normalization is instead
-$\|\psi-\phi_\chi\|^2=2(1-\sqrt{1-w})$.
+\end{equation}
+Then
+\begin{align}
+\langle\psi|\phi_\chi\rangle
+&=\frac{\sum_{\alpha\leq\chi}s_\alpha^2}{\sqrt{1-w}}
+=\sqrt{1-w},\\
+F&=|\langle\psi|\phi_\chi\rangle|^2=1-w,\\
+\|\psi-\phi_\chi\|^2&=2-2\operatorname{Re}\langle\psi|\phi_\chi\rangle
+=2(1-\sqrt{1-w}).
+\end{align}
+Thus discarded weight measures the error before normalization and the loss of fidelity after normalization.
 
-\section{The two-spin truncation example}
-Example 04 uses
-\[
+\subsection*{4. The two-spin example}
+For $0\leq\epsilon\leq1/2$, take
+\begin{equation}
 \ket{\psi_\epsilon}=\sqrt{1-\epsilon}\ket{\uparrow\uparrow}
-+\sqrt{\epsilon}\ket{\downarrow\downarrow},
-\qquad 0\leq\epsilon\leq\tfrac12.
-\]
-It is already in Schmidt form, with
-$s_1=\sqrt{1-\epsilon}$ and $s_2=\sqrt{\epsilon}$.
-Keeping the first term gives
-\[
-\ket{\widetilde\psi}=\sqrt{1-\epsilon}\ket{\uparrow\uparrow},
-\qquad \ket{\phi}=\ket{\uparrow\uparrow},
-\qquad w=\epsilon,\qquad F=1-\epsilon.
-\]
-Its entanglement entropy is
-$S=-(1-\epsilon)\log_2(1-\epsilon)-\epsilon\log_2\epsilon$.
-For $\epsilon=0.05$, the squared error before normalization is $0.05$
-and the fidelity after normalization is $0.95$.
++\sqrt\epsilon\ket{\downarrow\downarrow}.
+\end{equation}
+Keeping only the first Schmidt term gives
+\begin{align}
+\ket{\widetilde\psi}&=\sqrt{1-\epsilon}\ket{\uparrow\uparrow}
+\quad\xrightarrow{\text{normalize}}\quad\ket{\phi}=\ket{\uparrow\uparrow},\\
+w&=\epsilon,\qquad F=1-\epsilon,\\
+S&=-(1-\epsilon)\log_2(1-\epsilon)-\epsilon\log_2\epsilon.
+\end{align}
+For $\epsilon=0.05$, the squared error before normalization is $0.05$, and the fidelity afterward is $0.95$.
 
+\newpage
 \subsection*{Observable errors}
-With
-\[
-Z=\begin{pmatrix}1&0\\0&-1\end{pmatrix},
-\qquad X=\begin{pmatrix}0&1\\1&0\end{pmatrix},
-\]
-$Z\otimes I$ assigns eigenvalues $+1$ and $-1$ to the two terms,
-$Z\otimes Z$ assigns $+1$ to both, and $X\otimes X$ interchanges them.
-Consequently,
-\[
-\begin{array}{c|c|c|c}
-O&\langle O\rangle_{\psi_\epsilon}&\langle O\rangle_\phi
-&|\delta\langle O\rangle|\\ \hline
-Z\otimes I&1-2\epsilon&1&2\epsilon\\
-Z\otimes Z&1&1&0\\
-X\otimes X&2\sqrt{\epsilon(1-\epsilon)}&0&
-2\sqrt{\epsilon(1-\epsilon)}
-\end{array}
-\]
-Thus the same discarded weight can produce very different errors
-for different observables. More generally, for Hermitian $O$,
-\[
+Use
+\begin{equation}
+Z=\mtwo{1}{0}{0}{-1},\qquad X=\mtwo{0}{1}{1}{0}.
+\end{equation}
+Acting on the original state,
+\begin{align}
+(Z\otimes I)\ket{\psi_\epsilon}
+&=\sqrt{1-\epsilon}\ket{\uparrow\uparrow}-\sqrt\epsilon\ket{\downarrow\downarrow},\\
+(Z\otimes Z)\ket{\psi_\epsilon}&=\ket{\psi_\epsilon},\\
+(X\otimes X)\ket{\psi_\epsilon}
+&=\sqrt{1-\epsilon}\ket{\downarrow\downarrow}+\sqrt\epsilon\ket{\uparrow\uparrow}.
+\end{align}
+Taking the inner products gives
+\begin{align}
+\langle Z\otimes I\rangle_{\psi_\epsilon}&=(1-\epsilon)-\epsilon=1-2\epsilon,
+&\langle Z\otimes I\rangle_\phi&=1,\\
+\langle Z\otimes Z\rangle_{\psi_\epsilon}&=1,
+&\langle Z\otimes Z\rangle_\phi&=1,\\
+\langle X\otimes X\rangle_{\psi_\epsilon}&=2\sqrt{\epsilon(1-\epsilon)},
+&\langle X\otimes X\rangle_\phi&=0.
+\end{align}
+Hence
+\begin{equation}
+\Delta_{Z\otimes I}=2\epsilon,\qquad
+\Delta_{Z\otimes Z}=0,\qquad
+\Delta_{X\otimes X}=2\sqrt{\epsilon(1-\epsilon)}.
+\end{equation}
+The same truncation leaves one observable unchanged and alters the others. Fidelity describes the whole state; an individual observable can be much more accurate.
+
+For a general Hermitian $O$, use the standard trace-norm identities
+\begin{equation}
+|\operatorname{Tr}(O D)|\leq\|O\|_{\rm op}\|D\|_1,
+\qquad
+\bigl\|\ket{\psi}\bra{\psi}-\ket{\phi_\chi}\bra{\phi_\chi}\bigr\|_1
+=2\sqrt{1-F}.
+\end{equation}
+Substituting gives
+\begin{align}
 |\langle O\rangle_\psi-\langle O\rangle_{\phi_\chi}|
-\leq 2\|O\|_{\mathrm{op}}\sqrt{1-F}
-=2\|O\|_{\mathrm{op}}\sqrt{w},
-\]
-where $\|O\|_{\mathrm{op}}$ is the largest absolute eigenvalue.
-This follows from the trace-norm bound on expectation values and the
-pure-state identity
-$\|\ket{\psi}\bra{\psi}-\ket{\phi_\chi}\bra{\phi_\chi}\|_1
-=2\sqrt{1-F}$.
+&=\left|\operatorname{Tr}\!\left[O\left(\ket{\psi}\bra{\psi}
+-\ket{\phi_\chi}\bra{\phi_\chi}\right)\right]\right|\\
+&\leq2\|O\|_{\rm op}\sqrt{1-F}=2\|O\|_{\rm op}\sqrt w.
+\end{align}
+Here $\|O\|_{\rm op}$ is the largest absolute eigenvalue, and $\|D\|_1$ is the sum of the singular values of $D$.
+
 \end{document}

@@ -1,230 +1,209 @@
 \documentclass[11pt]{article}
-\usepackage[margin=1in]{geometry}
+\usepackage[margin=0.85in]{geometry}
 \usepackage{amsmath,amssymb}
+\usepackage{xcolor,listings}
+\usepackage{hyperref}
+\hypersetup{colorlinks=true,linkcolor=blue}
+\lstset{language=Python,basicstyle=\ttfamily\small,columns=fullflexible,
+ keepspaces=true,showstringspaces=false,backgroundcolor=\color{black!3},
+ frame=single,rulecolor=\color{black!15},aboveskip=7pt,belowskip=7pt}
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{5pt}
 \newcommand{\ket}[1]{\lvert #1\rangle}
 \newcommand{\bra}[1]{\langle #1\rvert}
-\title{MPS Observables and Bond-Dimension Truncation}
-\author{}
-\date{}
+\newcommand{\mtwo}[4]{\begin{pmatrix}#1&#2\\#3&#4\end{pmatrix}}
+\newcommand{\vfour}[4]{\begin{pmatrix}#1\\#2\\#3\\#4\end{pmatrix}}
+\newcommand{\heading}[1]{\begin{center}\large\textit{#1}\end{center}}
 \begin{document}
-\maketitle
-\noindent Accompanies examples 07 (MPS observables) and 08 (MPS
-truncation). Sites are numbered $0,\ldots,N-1$, as in the code.
 
-\section{Expectation values from an MPS}
-Write the state and its MPS coefficients as
-\[
-\ket{\psi}=\sum_{\boldsymbol{i}}C_{\boldsymbol{i}}
-\ket{i_0\cdots i_{N-1}},
-\qquad
-C_{\boldsymbol{i}}=
-\sum_{\boldsymbol{\alpha}}
+\heading{MPS Observables and Bond-Dimension Truncation}
+\textit{Examples 07 and 08; sites numbered $0,\ldots,N-1$.}
+
+\subsection*{1. Expectation values from an MPS}
+Write
+\begin{equation}
+\ket\psi=\sum_{\boldsymbol i}C_{\boldsymbol i}\ket{i_0\cdots i_{N-1}},
+\qquad C_{\boldsymbol i}=\sum_{\boldsymbol\alpha}
 \prod_{\ell=0}^{N-1}A^{[\ell]}_{\alpha_\ell i_\ell\alpha_{\ell+1}}.
-\]
-Tensor $A^{[\ell]}$ has shape $(\chi_\ell,2,\chi_{\ell+1})$,
-with $\chi_0=\chi_N=1$. Only interior bonds are summed;
-the boundary indices have their single allowed value, written as 1.
+\end{equation}
+Each tensor has shape $(\chi_\ell,2,\chi_{\ell+1})$, with $\chi_0=\chi_N=1$. We use $0$ for the fixed outer indices, as in the code.
 
-For a product operator $O=O_0\otimes\cdots\otimes O_{N-1}$,
-substitution of the bra and ket MPS gives
-\begin{align*}
-\bra{\psi}O\ket{\psi}
-&=\sum_{\boldsymbol{i},\boldsymbol{j}}
- C_{\boldsymbol{i}}^*C_{\boldsymbol{j}}
- \prod_{\ell=0}^{N-1}(O_\ell)_{i_\ell j_\ell}\\
-&=\sum_{\boldsymbol{i},\boldsymbol{j},
-         \boldsymbol{\alpha},\boldsymbol{\beta}}
- \prod_{\ell=0}^{N-1}
- \left[
- (A^{[\ell]}_{\alpha_\ell i_\ell\alpha_{\ell+1}})^*
- (O_\ell)_{i_\ell j_\ell}
- A^{[\ell]}_{\beta_\ell j_\ell\beta_{\ell+1}}
- \right]\\
-&=\sum_{\boldsymbol{\alpha},\boldsymbol{\beta}}
- \prod_{\ell=0}^{N-1}
- \left[
- \sum_{i,j}(A^{[\ell]}_{\alpha_\ell i\alpha_{\ell+1}})^*
- (O_\ell)_{ij}A^{[\ell]}_{\beta_\ell j\beta_{\ell+1}}
- \right].
-\end{align*}
-
-\subsection*{The environment update}
-For three sites, the expression above becomes
-\begin{align*}
-\bra{\psi}O\ket{\psi}
-={}&\sum_{\alpha_1,\beta_1,\alpha_2,\beta_2}
-\left[\sum_{i_0,j_0}(A^{[0]}_{1i_0\alpha_1})^*
-(O_0)_{i_0j_0}A^{[0]}_{1j_0\beta_1}\right]\\
+For $O=O_0\otimes\cdots\otimes O_{N-1}$, substitute the coefficients:
+\begin{align}
+\bra\psi O\ket\psi
+&=\sum_{\boldsymbol i,\boldsymbol j}C_{\boldsymbol i}^*C_{\boldsymbol j}
+\prod_{\ell=0}^{N-1}(O_\ell)_{i_\ell j_\ell}\\
+&=\sum_{\boldsymbol i,\boldsymbol j,\boldsymbol\alpha,\boldsymbol\beta}
+\prod_{\ell=0}^{N-1}\left[(A^{[\ell]}_{\alpha_\ell i_\ell\alpha_{\ell+1}})^*
+(O_\ell)_{i_\ell j_\ell}A^{[\ell]}_{\beta_\ell j_\ell\beta_{\ell+1}}\right]\\
+&=\sum_{\boldsymbol\alpha,\boldsymbol\beta}\prod_{\ell=0}^{N-1}
+\left[\sum_{ij}(A^{[\ell]}_{\alpha_\ell i\alpha_{\ell+1}})^*
+(O_\ell)_{ij}A^{[\ell]}_{\beta_\ell j\beta_{\ell+1}}\right].
+\end{align}
+For three sites, this is
+\begin{align}
+\bra\psi O\ket\psi={}&\sum_{\alpha_1,\beta_1,\alpha_2,\beta_2}
+\left[\sum_{i_0,j_0}(A^{[0]}_{0i_0\alpha_1})^*
+(O_0)_{i_0j_0}A^{[0]}_{0j_0\beta_1}\right]\notag\\
 &\times\left[\sum_{i_1,j_1}(A^{[1]}_{\alpha_1i_1\alpha_2})^*
-(O_1)_{i_1j_1}A^{[1]}_{\beta_1j_1\beta_2}\right]\\
-&\times\left[\sum_{i_2,j_2}(A^{[2]}_{\alpha_2i_2 1})^*
-(O_2)_{i_2j_2}A^{[2]}_{\beta_2j_2 1}\right].
-\end{align*}
+(O_1)_{i_1j_1}A^{[1]}_{\beta_1j_1\beta_2}\right]\notag\\
+&\times\left[\sum_{i_2,j_2}(A^{[2]}_{\alpha_2i_2 0})^*
+(O_2)_{i_2j_2}A^{[2]}_{\beta_2j_2 0}\right].
+\end{align}
 Call the first bracket $E^{[1]}$:
-\[
-\boxed{E^{[1]}_{\alpha_1\beta_1}
-=\sum_{i_0,j_0}(A^{[0]}_{1i_0\alpha_1})^*
-(O_0)_{i_0j_0}A^{[0]}_{1j_0\beta_1}}.
-\]
+\begin{equation}
+E^{[1]}_{\alpha_1\beta_1}
+=\sum_{i_0,j_0}(A^{[0]}_{0i_0\alpha_1})^*(O_0)_{i_0j_0}A^{[0]}_{0j_0\beta_1}.
+\end{equation}
 Multiply by the second bracket and sum the shared bonds:
-\[
-\boxed{E^{[2]}_{\alpha_2\beta_2}
-=\sum_{\alpha_1,\beta_1}E^{[1]}_{\alpha_1\beta_1}
+\begin{equation}
+E^{[2]}_{\alpha_2\beta_2}=\sum_{\alpha_1,\beta_1}E^{[1]}_{\alpha_1\beta_1}
 \left[\sum_{i_1,j_1}(A^{[1]}_{\alpha_1i_1\alpha_2})^*
-(O_1)_{i_1j_1}A^{[1]}_{\beta_1j_1\beta_2}\right]}.
-\]
-Finally, include the third bracket:
-\[
-\bra{\psi}O\ket{\psi}
-=\sum_{\alpha_2,\beta_2}E^{[2]}_{\alpha_2\beta_2}
-\left[\sum_{i_2,j_2}(A^{[2]}_{\alpha_2i_2 1})^*
-(O_2)_{i_2j_2}A^{[2]}_{\beta_2j_2 1}\right].
-\]
-The environment is the accumulated result of the sites already
-processed, with the bonds to the next site left unsummed.
+(O_1)_{i_1j_1}A^{[1]}_{\beta_1j_1\beta_2}\right].
+\end{equation}
+Finally,
+\begin{equation}
+\bra\psi O\ket\psi=\sum_{\alpha_2,\beta_2}E^{[2]}_{\alpha_2\beta_2}
+\left[\sum_{i_2,j_2}(A^{[2]}_{\alpha_2i_2 0})^*
+(O_2)_{i_2j_2}A^{[2]}_{\beta_2j_2 0}\right].
+\end{equation}
+The environment contains the sites already processed. Its two unsummed indices connect that result to the next site.
 
+\newpage
 \subsection*{Connection to the code}
-At site $k$, rename the incoming and outgoing bonds as
-\[
-a=\alpha_k,\qquad c=\beta_k,\qquad
-b=\alpha_{k+1},\qquad d=\beta_{k+1}.
-\]
-The repeated step is then
-\[
-E^{[k+1]}_{bd}=\sum_{a,c,i,j}E^{[k]}_{ac}
-(A^{[k]}_{aib})^*(O_k)_{ij}A^{[k]}_{cjd}.
-\]
-Start with $E^{[0]}=(1)$; after the last site,
-$E^{[N]}_{11}=\bra{\psi}O\ket{\psi}$.
-\begin{verbatim}
+At site $k$, rename the bond indices:
+\begin{equation}
+a=\alpha_k,\qquad c=\beta_k,\qquad b=\alpha_{k+1},\qquad d=\beta_{k+1}.
+\end{equation}
+The repeated update is
+\begin{equation}
+E^{[k+1]}_{bd}=\sum_{a,c,i,j}E^{[k]}_{ac}(A^{[k]}_{aib})^*(O_k)_{ij}A^{[k]}_{cjd}.
+\end{equation}
+\begin{lstlisting}
 environment = np.einsum(
     "ac,aib,ij,cjd->bd",
     environment, A.conj(), operator, A,
     optimize=True,
 )
-\end{verbatim}
-The labels match the update equation: $a,c,i,j$ are summed and
-$b,d$ remain. The final scalar is \texttt{environment[0, 0]}.
-Unspecified sites use identity; for example, \texttt{\{0: Z, 1: Z\}}
-inserts $Z_0Z_1$.
+\end{lstlisting}
+Start with $E^{[0]}=(1)$; the final result is
+\begin{equation}
+E^{[N]}_{00}=\bra\psi O\ket\psi
+\quad\longleftrightarrow\quad\texttt{environment[0, 0]}.
+\end{equation}
+Unspecified sites use identity. For example, \texttt{\{0: Z, 1: Z\}} inserts $Z_0Z_1$.
 
 With identity at every site,
-\[
-(O_k)_{ij}=\delta_{ij}
-\quad\Longrightarrow\quad
-E^{[k+1]}_{bd}=\sum_{a,c,i}E^{[k]}_{ac}(A^{[k]}_{aib})^*A^{[k]}_{cid},
-\]
-so the final result is $\langle\psi|\psi\rangle$. Normalized expectation
-values and connected correlations are
-\[
-\langle O\rangle_\psi=
-\frac{\bra{\psi}O\ket{\psi}}{\langle\psi|\psi\rangle},
-\qquad
-C^{ZZ}_{rs}=\langle Z_rZ_s\rangle_\psi
--\langle Z_r\rangle_\psi\langle Z_s\rangle_\psi.
-\]
-A nonzero connected correlation alone does not establish entanglement.
+\begin{align}
+(O_k)_{ij}&=\delta_{ij},\\
+E^{[k+1]}_{bd}&=\sum_{a,c,i}E^{[k]}_{ac}(A^{[k]}_{aib})^*A^{[k]}_{cid},\\
+E^{[N]}_{00}&=\langle\psi|\psi\rangle.
+\end{align}
+Hence normalized expectations and connected correlations are
+\begin{align}
+\langle O\rangle_\psi&=\frac{\bra\psi O\ket\psi}{\langle\psi|\psi\rangle},\\
+C^{ZZ}_{rs}&=\langle Z_rZ_s\rangle_\psi-\langle Z_r\rangle_\psi\langle Z_s\rangle_\psi.
+\end{align}
+A nonzero connected correlation alone does not establish entanglement. The contraction computes these observables without reconstructing the full state vector.
 
-\section{Imposing a maximum bond dimension}
-At each split, reshape the current remainder into a matrix and take
-its SVD. Retaining the largest $r\leq\chi_{\max}$ singular values gives
-\[
+\subsection*{2. Imposing a maximum bond dimension}
+At each split, reshape the remainder into $M$ and take its SVD. Retain the largest $r\leq\chi_{\max}$ singular values:
+\begin{equation}
 M=\sum_\alpha s_\alpha u_\alpha v_\alpha^\dagger
 \quad\longrightarrow\quad
 M_r=\sum_{\alpha=1}^{r}s_\alpha u_\alpha v_\alpha^\dagger.
-\]
+\end{equation}
 The code also removes singular values below the numerical tolerance.
 
-\section{Quantities compared in example 08}
-Let $\ket{\widetilde\psi}$ be the truncated state. Its normalized
-version is
-\[
-\boxed{\ket{\phi}=\frac{\ket{\widetilde\psi}}
-{\sqrt{\langle\widetilde\psi|\widetilde\psi\rangle}}}.
-\]
-In the code, compute the norm with identity operators and divide
-the last MPS tensor by that norm.
-
-The storage count, fidelity, and observable errors are
-\begin{align*}
-P_{\mathrm{MPS}}&=2\sum_{k=0}^{N-1}\chi_k\chi_{k+1},
-& R&=\frac{P_{\mathrm{MPS}}}{2^N},\\
+\newpage
+\subsection*{3. Quantities compared in example 08}
+Normalize the truncated state $\ket{\widetilde\psi}$:
+\begin{equation}
+n=\sqrt{\langle\widetilde\psi|\widetilde\psi\rangle},\qquad
+\ket\phi=\frac{\ket{\widetilde\psi}}{n}.
+\end{equation}
+Compute $n$ with identity operators, then rescale the last MPS tensor:
+\begin{equation}
+A^{[N-1]}\longrightarrow\frac{A^{[N-1]}}{n}.
+\end{equation}
+Compare the stored entries, fidelity, and observable errors:
+\begin{align}
+P_{\rm MPS}&=2\sum_{k=0}^{N-1}\chi_k\chi_{k+1},
+&R&=\frac{P_{\rm MPS}}{2^N},\\
 F&=|\langle\psi|\phi\rangle|^2,
 &\Delta_O&=|\langle O\rangle_\phi-\langle O\rangle_\psi|.
-\end{align*}
+\end{align}
+These distinguish storage savings, accuracy of the whole state, and accuracy of the chosen observables.
 
-\section{The four state families}
-\subsection*{Product and GHZ states}
-Group the first $k$ spins and the remaining $N-k$ spins into two
-subsystems. The product state has one term in this grouping; GHZ has two:
-\[
-\ket{+}^{\otimes N}
-=\ket{+}^{\otimes k}\otimes\ket{+}^{\otimes(N-k)}
-\quad\Longrightarrow\quad r_k=1,
-\]
-\[
+\subsection*{4. The four state families}
+\textbf{Product and GHZ states.} Group the first $k$ spins and the remaining $N-k$ spins:
+\begin{align}
+\ket+^{\otimes N}&=\ket+^{\otimes k}\otimes\ket+^{\otimes(N-k)},\\
 \ket{\mathrm{GHZ}_N}
-=\frac{\ket{\uparrow}^{\otimes k}\ket{\uparrow}^{\otimes(N-k)}
-+\ket{\downarrow}^{\otimes k}\ket{\downarrow}^{\otimes(N-k)}}{\sqrt2}
-\quad\Longrightarrow\quad r_k=2.
-\]
-For $N\geq2$, retaining the all-up GHZ component illustrates how
-observable accuracy can differ from state accuracy:
-\[
-\ket{\phi}=\ket{\uparrow}^{\otimes N},\qquad F=\tfrac12,
-\qquad
-\begin{array}{c|ccc}
- &\langle X_0\rangle&\langle Z_0\rangle&\langle Z_0Z_1\rangle\\\hline
-\mathrm{GHZ}&0&0&1\\
-\phi&0&1&1
-\end{array}.
-\]
+&=\frac{\ket\uparrow^{\otimes k}\ket\uparrow^{\otimes(N-k)}
++\ket\downarrow^{\otimes k}\ket\downarrow^{\otimes(N-k)}}{\sqrt2}.
+\end{align}
+There is one Schmidt term for the product state and two for GHZ:
+\begin{equation}
+r_k^{\rm product}=1,\qquad r_k^{\rm GHZ}=2.
+\end{equation}
+For $N\geq2$, retain the all-up GHZ component:
+\begin{equation}
+\ket\phi=\ket\uparrow^{\otimes N},\qquad
+F=\left|\frac1{\sqrt2}\right|^2=\frac12.
+\end{equation}
+The observables are
+\begin{align}
+\langle X_0\rangle_{\rm GHZ}&=0,&\langle X_0\rangle_\phi&=0,\\
+\langle Z_0\rangle_{\rm GHZ}&=0,&\langle Z_0\rangle_\phi&=1,\\
+\langle Z_0Z_1\rangle_{\rm GHZ}&=1,&\langle Z_0Z_1\rangle_\phi&=1.
+\end{align}
+The truncated state reproduces two of these observables exactly despite having fidelity $1/2$. Agreement for selected observables does not guarantee agreement of the states.
 
+\newpage
 \subsection*{The compressible state}
 Combine normalized random product states with decreasing amplitudes:
-\[
-\ket{p_m}=\bigotimes_{\ell=0}^{N-1}\ket{v_{m,\ell}},
-\qquad
-\ket{\Psi}=\sum_{m=0}^{M-1}q^m\ket{p_m},
-\qquad
-\ket{\psi}=\frac{\ket{\Psi}}{\|\Psi\|}.
-\]
-The example uses $M=8$ and $q=1/2$. The product states need not be
-orthogonal, so $q^m$ are not Schmidt coefficients.
-Split each product term into a left and right part. Writing it as $\ket{L_m}\otimes\ket{R_m}$ gives
-\[
-C=\sum_{m=0}^{M-1}q^mL_mR_m^{\mathsf T}
-\quad\Longrightarrow\quad
-\operatorname{rank}C\leq M.
-\]
-Keep the first $K$ terms to form $\ket{\Psi_K}$. This has rank at most
-$K$, and
-\[
+\begin{equation}
+\ket{p_m}=\bigotimes_{\ell=0}^{N-1}\ket{v_{m,\ell}},\qquad
+\ket\Psi=\sum_{m=0}^{M-1}q^m\ket{p_m},\qquad
+\ket\psi=\frac{\ket\Psi}{\|\Psi\|}.
+\end{equation}
+The example uses $M=8$ and $q=1/2$. For the unnormalized state $\ket\Psi$, split each product term into left and right parts:
+\begin{align}
+\ket{p_m}&=\ket{L_m}\otimes\ket{R_m},\\
+C&=\sum_{m=0}^{M-1}q^m L_m R_m^{\mathsf T},\\
+\operatorname{rank}C&\leq\sum_{m=0}^{M-1}\operatorname{rank}(L_mR_m^{\mathsf T})=M.
+\end{align}
+The product states need not be orthogonal, so the amplitudes $q^m$ are not Schmidt coefficients.
+
+Keep the first $K$ product terms:
+\begin{equation}
+\ket{\Psi_K}=\sum_{m=0}^{K-1}q^m\ket{p_m},\qquad
+\operatorname{rank}C_K\leq K.
+\end{equation}
+Then
+\begin{align}
 \|\Psi-\Psi_K\|
-=\left\|\sum_{m=K}^{M-1}q^m\ket{p_m}\right\|
-\leq\sum_{m=K}^{M-1}q^m
+&=\left\|\sum_{m=K}^{M-1}q^m\ket{p_m}\right\|\\
+&\leq\sum_{m=K}^{M-1}q^m\|p_m\|
+=\sum_{m=K}^{M-1}q^m
 =\frac{q^K(1-q^{M-K})}{1-q}.
-\]
-The omitted terms get smaller as $K$ increases. This motivates the
-construction; the SVD does not explicitly select these product terms.
+\end{align}
+The omitted terms get smaller with $K$, motivating a compressible state. SVD finds its own Schmidt terms rather than selecting these product terms directly.
 
 \subsection*{Random states and the comparison}
-After grouping $k$ spins on the left, the coefficient matrix has
-$2^k$ rows and $2^{N-k}$ columns. A generic random state has the
-largest possible rank:
-\[
-r_k=2^{\min(k,N-k)}
-\]
-Such states typically have substantial weight in many Schmidt
-coefficients. For eight spins, the largest matrix rank is $16$
-at the middle split ($4$ spins on each side). Sufficient caps
-for exact representation are therefore
-\[
-\begin{array}{c|cccc}
-\text{State}&\text{Product}&\text{GHZ}&\text{Compressible}&\text{Random}\\\hline
-\text{Cap}&1&2&8&16
-\end{array}.
-\]
-These states are reproduced up to numerical precision at the listed
-caps. Errors below $10^{-15}$ are plotted at $10^{-15}$.
+Grouping $k$ spins on the left produces
+\begin{equation}
+C:\ 2^k\times2^{N-k},\qquad
+r_k\leq\min(2^k,2^{N-k})=2^{\min(k,N-k)}.
+\end{equation}
+A generic random state reaches this rank and typically spreads substantial weight across many Schmidt coefficients. For eight spins, the middle split gives $r_4=2^4=16$.
+
+Sufficient maximum bond dimensions for the eight-spin comparison are
+\begin{align}
+\chi_{\max}^{\rm product}&=1,&\chi_{\max}^{\rm GHZ}&=2,\\
+\chi_{\max}^{\rm compressible}&=8,&\chi_{\max}^{\rm random}&=16.
+\end{align}
+At these values, the states are reproduced to numerical precision. Smaller bonds test how much accuracy can be retained with fewer entries. Errors below $10^{-15}$ are plotted at $10^{-15}$.
+
 \end{document}

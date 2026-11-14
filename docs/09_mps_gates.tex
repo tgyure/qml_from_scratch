@@ -1,0 +1,276 @@
+\documentclass[11pt]{article}
+\usepackage[margin=0.8in]{geometry}
+\usepackage{amsmath,amssymb}
+\usepackage{xcolor,listings}
+\usepackage{hyperref}
+\hypersetup{colorlinks=true,linkcolor=blue}
+\lstset{language=Python,basicstyle=\ttfamily\small,backgroundcolor=\color{black!3},frame=single,rulecolor=\color{black!15},columns=fullflexible,keepspaces=true,showstringspaces=false,aboveskip=8pt,belowskip=8pt}
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{6pt}
+\newcommand{\ket}[1]{\lvert #1\rangle}
+\newcommand{\vfour}[4]{\begin{pmatrix}#1\\#2\\#3\\#4\end{pmatrix}}
+\newcommand{\mtwo}[4]{\begin{pmatrix}#1&#2\\#3&#4\end{pmatrix}}
+\begin{document}
+\begin{center}
+{\LARGE 09: Gates acting on an MPS}\\[5pt]
+{\large Full state $\longrightarrow$ MPS mathematics $\longrightarrow$ MPS code}
+\end{center}
+We apply Hadamard to the first spin, then CNOT to both spins. These are unitary gate operations; we have not yet chosen a Hamiltonian for time evolution.
+
+\section*{1. Full-state evolution}
+Use the basis $\ket{00},\ket{01},\ket{10},\ket{11}$, with $\ket{0}=\ket{\uparrow}$ and $\ket{1}=\ket{\downarrow}$.
+\[
+\ket{\psi_0}=\ket{00}=\vfour{1}{0}{0}{0},\qquad
+H=\frac1{\sqrt2}\mtwo{1}{1}{1}{-1},\qquad
+G=\begin{pmatrix}1&0&0&0\\0&1&0&0\\0&0&0&1\\0&0&1&0\end{pmatrix}.
+\]
+First apply $H\otimes I$:
+\[
+\ket{\psi_H}
+=\frac1{\sqrt2}\begin{pmatrix}1&0&1&0\\0&1&0&1\\1&0&-1&0\\0&1&0&-1\end{pmatrix}
+\vfour{1}{0}{0}{0}
+=\frac1{\sqrt2}\vfour{1}{0}{1}{0}
+=\frac{\ket{00}+\ket{10}}{\sqrt2}.
+\]
+Then apply CNOT:
+\[
+\ket{\psi_G}
+=\frac1{\sqrt2}\begin{pmatrix}1&0&0&0\\0&1&0&0\\0&0&0&1\\0&0&1&0\end{pmatrix}
+\vfour{1}{0}{1}{0}
+=\frac1{\sqrt2}\vfour{1}{0}{0}{1}
+=\frac{\ket{00}+\ket{11}}{\sqrt2}.
+\]
+CNOT flips the second spin when the first is $1$. The result is a Bell state.
+
+\begin{lstlisting}
+import numpy as np
+
+up = np.array([1, 0], dtype=complex)
+state = np.kron(up, up)
+H = np.array([[1, 1], [1, -1]], dtype=complex) / np.sqrt(2)
+CNOT = np.array([[1, 0, 0, 0],
+                 [0, 1, 0, 0],
+                 [0, 0, 0, 1],
+                 [0, 0, 1, 0]], dtype=complex)
+identity = np.eye(2, dtype=complex)
+
+state_after_H = np.kron(H, identity) @ state
+state_after_CNOT = CNOT @ state_after_H
+\end{lstlisting}
+
+\newpage
+\section*{2. MPS evolution with ordinary matrices}
+The coefficient matrix stores the state amplitudes:
+\[
+\ket{\psi}=C_{00}\ket{00}+C_{01}\ket{01}+C_{10}\ket{10}+C_{11}\ket{11},
+\qquad C=\mtwo{C_{00}}{C_{01}}{C_{10}}{C_{11}}.
+\]
+It is not an operator acting on $\ket{00}$. For two spins, an MPS is a factorization
+\[
+C=A^{[1]}A^{[2]},\qquad
+C_{ij}=\sum_\alpha A^{[1]}_{i\alpha}A^{[2]}_{\alpha j}.
+\]
+\textbf{Initial MPS.} The initial coefficient matrix factors directly:
+\[
+C_0=\mtwo{1}{0}{0}{0}
+=\underbrace{\begin{pmatrix}1\\0\end{pmatrix}}_{A_0^{[1]}}
+\underbrace{\begin{pmatrix}1&0\end{pmatrix}}_{A_0^{[2]}}.
+\]
+\textbf{Hadamard.} Update the first factor:
+\[
+A_H^{[1]}=HA_0^{[1]}=\frac1{\sqrt2}\begin{pmatrix}1\\1\end{pmatrix},
+\qquad
+C_H=A_H^{[1]}A_0^{[2]}=\frac1{\sqrt2}\mtwo{1}{0}{1}{0}.
+\]
+\textbf{CNOT.} Join the factors, flatten row by row, apply $G$, and reshape:
+\[
+\underbrace{\frac1{\sqrt2}\mtwo{1}{0}{1}{0}}_{C_H}
+\xrightarrow{\text{flatten}}
+\frac1{\sqrt2}\vfour{1}{0}{1}{0}
+\xrightarrow{G}
+\frac1{\sqrt2}\vfour{1}{0}{0}{1}
+\xrightarrow{\text{reshape}}
+\underbrace{\frac1{\sqrt2}\mtwo{1}{0}{0}{1}}_{C_G}.
+\]
+\textbf{Restore the MPS.} Factor the updated matrix:
+\[
+C_G=USV^\dagger,\qquad
+A_G^{[1]}=U,\qquad A_G^{[2]}=SV^\dagger.
+\]
+One valid SVD gives
+\[
+U=V^\dagger=I,\qquad S=\frac1{\sqrt2}I,
+\qquad
+\boxed{A_G^{[1]}=\mtwo{1}{0}{0}{1},\quad
+A_G^{[2]}=\frac1{\sqrt2}\mtwo{1}{0}{0}{1}.}
+\]
+The shared dimension has grown from $1$ to $2$. These new factors are the final MPS. An SVD routine may return different factors with the same product.
+
+\textbf{Connection to the code.} Above, we flattened the coefficients to use the $4\times4$ gate. The code instead reshapes the gate and keeps the coefficient tensor's axes. Both routes give the same $C_G$ before SVD.
+
+For two spins, $C_G$ holds the entire state's amplitudes. In a longer chain, the same procedure joins, updates, and splits only the two neighboring tensors touched by the gate; the full state need not be reconstructed.
+
+\newpage
+\section*{3. MPS code: initial tensors and Hadamard}
+The code stores each tensor as
+\[
+(\text{left bond},\ \text{physical spin},\ \text{right bond}).
+\]
+For the initial product state:
+\begin{lstlisting}
+A1 = up.reshape(1, 2, 1).copy()
+A2 = up.reshape(1, 2, 1).copy()
+\end{lstlisting}
+The entries are unchanged:
+\[
+\texttt{up[0]}=1,\quad\texttt{up[1]}=0
+\quad\longrightarrow\quad
+\texttt{A1[0,0,0]}=1,\quad\texttt{A1[0,1,0]}=0.
+\]
+Only the middle index can vary. The outer axes are placeholders: there are no spins beyond the two ends. Adding an axis of size one adds no coefficients.
+
+Omitting those outer axes recovers our matrices:
+\[
+\texttt{A1[0,:,:]}=\begin{pmatrix}1\\0\end{pmatrix},
+\qquad
+\texttt{A2[:,:,0]}=\begin{pmatrix}1&0\end{pmatrix}.
+\]
+The shared dimension is one because the initial state is a product. After entanglement is created, it becomes two:
+\[
+\begin{array}{c|cc}
+ & A^{[1]} & A^{[2]}\\\hline
+\text{Initial shapes} &(1,2,1)&(1,2,1)\\
+\text{Final shapes} &(1,2,2)&(2,2,1)
+\end{array}
+\]
+An entangled state's tensors come from factoring the joint coefficients, not from reshaping two independent spin vectors.
+
+\subsection*{Apply Hadamard}
+\[
+A_H^{[1]}=HA_0^{[1]}
+\quad\longleftrightarrow\quad
+(A_H^{[1]})_{aib}=\sum_j H_{ij}(A_0^{[1]})_{ajb}.
+\]
+\begin{lstlisting}
+A1 = np.einsum("ij,ajb->aib", H, A1)
+\end{lstlisting}
+Here $a,b$ are bond indices; $i,j$ are spin indices. The gate acts on the physical index and leaves the bond axes in place.
+
+An optional check reconstructs the state:
+\begin{lstlisting}
+mps_after_H = np.tensordot(
+    A1, A2, axes=([-1], [0])
+).reshape(-1)
+print(np.linalg.norm(mps_after_H - state_after_H))
+\end{lstlisting}
+\[
+A_H^{[1]}A_0^{[2]}=C_H
+\xrightarrow{\text{flatten}}
+\frac1{\sqrt2}\vfour{1}{0}{1}{0}.
+\]
+
+\newpage
+\section*{4. MPS code: join and apply CNOT}
+\subsection*{Join the two tensors}
+\begin{lstlisting}
+theta = np.tensordot(A1, A2, axes=([-1], [0]))
+\end{lstlisting}
+This sums their shared bond:
+\[
+(\Theta_H)_{aijc}=\sum_b (A_H^{[1]})_{aib}(A_0^{[2]})_{bjc}.
+\]
+For our two-spin state,
+\[
+\boxed{(\Theta_H)_{0ij0}=(C_H)_{ij}},\qquad
+C_H=\frac1{\sqrt2}\mtwo{1}{0}{1}{0}.
+\]
+Thus \texttt{theta} is $C_H$ with its outer axes retained: shape $(1,2,2,1)$. This repeats the optional check's contraction, but does not flatten it.
+
+\subsection*{Reshape the gate, then apply it}
+The gate's row labels are $00,01,10,11$, and so are its column labels. Separate each label into its two spins:
+\[
+\underbrace{G_{2i+j,\,2p+q}}_{\text{matrix entry}}
+\quad\xrightarrow{\text{reshape}}\quad
+\underbrace{\texttt{gate[i,j,p,q]}}_{\text{same entry}}.
+\]
+\begin{lstlisting}
+gate = CNOT.reshape(2, 2, 2, 2)
+theta = np.einsum("ijpq,apqc->aijc", gate, theta)
+\end{lstlisting}
+The input spins are $p,q$; the output spins are $i,j$. The multiplication is
+\[
+(\Theta_G)_{aijc}
+=\sum_{p,q}G_{2i+j,\,2p+q}(\Theta_H)_{apqc}.
+\]
+The code reuses the name \texttt{theta}: it now holds $\Theta_G$. The result is
+\[
+\underbrace{\bigl[(\Theta_H)_{0ij0}\bigr]_{ij}}_{C_H}
+=\frac1{\sqrt2}\mtwo{1}{0}{1}{0}
+\quad\xrightarrow{\text{CNOT}}\quad
+\underbrace{\bigl[(\Theta_G)_{0ij0}\bigr]_{ij}}_{C_G}
+=\frac1{\sqrt2}\mtwo{1}{0}{0}{1}.
+\]
+\subsection*{The equivalent vector route}
+For this two-spin example, the two gate lines above could instead be:
+\begin{lstlisting}
+vector = theta.reshape(4)
+vector = CNOT @ vector
+theta = vector.reshape(1, 2, 2, 1)
+\end{lstlisting}
+These are alternatives, not consecutive steps. This version is the matrix-to-vector calculation on page 2; the original version carries the outer bond axes through the operation.
+
+\newpage
+\section*{5. MPS code: split and keep the updated MPS}
+\setlength{\parskip}{3pt}
+\setlength{\abovedisplayskip}{7pt}
+\setlength{\belowdisplayskip}{7pt}
+After CNOT, $\Theta_G$ contains the updated coefficients:
+\[
+(\Theta_G)_{0ij0}=(C_G)_{ij}.
+\]
+\subsection*{Arrange them as a matrix}
+\begin{lstlisting}
+left_bond = theta.shape[0]    # 1
+right_bond = theta.shape[-1]  # 1
+matrix = theta.reshape(left_bond * 2, 2 * right_bond)
+\end{lstlisting}
+\[
+\underbrace{\Theta_G}_{(1,2,2,1)}
+\xrightarrow{\text{reshape}}
+\underbrace{C_G=\frac1{\sqrt2}\mtwo{1}{0}{0}{1}}_{\texttt{matrix},\ (2,2)}.
+\]
+In a longer chain, this reshape groups the left bond with the first spin into a row, and the second spin with the right bond into a column.
+
+\subsection*{Factor into the new tensors}
+\[
+C_G=USV^\dagger,\qquad s_1=s_2=\frac1{\sqrt2}.
+\]
+\begin{lstlisting}
+U, s, Vh = np.linalg.svd(matrix, full_matrices=False)
+bond = max(1, int(np.count_nonzero(s > 1e-12)))
+\end{lstlisting}
+Both singular values survive the numerical threshold, so \texttt{bond = 2}.
+\[
+A_G^{[1]}=U,\qquad A_G^{[2]}=SV^\dagger.
+\]
+\begin{lstlisting}
+A1 = U[:, :bond].reshape(left_bond, 2, bond)
+A2 = (np.diag(s[:bond]) @ Vh[:bond, :]).reshape(
+    bond, 2, right_bond
+)
+\end{lstlisting}
+\textbf{The final MPS is now complete:} \texttt{A1} and \texttt{A2} have shapes $(1,2,2)$ and $(2,2,1)$. Keep these tensors for further gates or expectation values.
+
+\subsection*{Optional: reconstruct only to verify}
+\begin{lstlisting}
+mps_after_CNOT = np.tensordot(
+    A1, A2, axes=([-1], [0])
+).reshape(-1)
+print(np.linalg.norm(mps_after_CNOT - state_after_CNOT))
+\end{lstlisting}
+\[
+A_G^{[1]}A_G^{[2]}=C_G
+\xrightarrow{\text{flatten}}
+\frac1{\sqrt2}\vfour{1}{0}{0}{1}.
+\]
+\end{document}
