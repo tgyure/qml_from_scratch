@@ -1,0 +1,252 @@
+\documentclass[11pt]{article}
+\usepackage[margin=0.85in]{geometry}
+\usepackage{amsmath,amssymb}
+\usepackage{hyperref}
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{6pt}
+\newcommand{\ket}[1]{\lvert #1\rangle}
+\newcommand{\bra}[1]{\langle #1\rvert}
+\newcommand{\mtwo}[4]{\begin{pmatrix}#1&#2\\#3&#4\end{pmatrix}}
+\begin{document}
+\begin{center}
+{\Large States, Entanglement, and Matrix Product States}\\[5pt]
+\textit{From coefficients to Schmidt terms to a chain of tensors}
+\end{center}
+
+\section*{1. A state and its coefficient matrix}
+A state of $N$ spins is
+\begin{equation}
+\ket\psi=\sum_{i_1\cdots i_N}C_{i_1\cdots i_N}\ket{i_1\cdots i_N},
+\qquad \sum_{i_1\cdots i_N}|C_{i_1\cdots i_N}|^2=1.
+\end{equation}
+Choose a split into two subsystems, such as $(1,2)\,|\,(3,4)$. Group the left spin labels into $i$ and the right labels into $j$:
+\begin{equation}
+\ket\psi=\sum_{ij}C_{ij}\ket i_L\ket j_R.
+\end{equation}
+The same amplitudes now form a matrix. For two spins, this is simply
+\begin{equation}
+\begin{pmatrix}C_{00}\\C_{01}\\C_{10}\\C_{11}\end{pmatrix}
+\xrightarrow{\text{reshape}}
+C=\mtwo{C_{00}}{C_{01}}{C_{10}}{C_{11}}.
+\end{equation}
+A subsystem is a collection of spins. A state of that subsystem can contain entanglement among its own spins. Throughout, entanglement \emph{across the split} concerns the relation between the chosen left and right collections.
+
+\section*{2. SVD identifies the Schmidt terms}
+Factor the coefficient matrix:
+\begin{equation}
+C=U\Sigma V^\dagger,\qquad
+C_{ij}=\sum_\alpha s_\alpha U_{i\alpha}V^*_{j\alpha}.
+\end{equation}
+Substituting into the state gives
+\begin{align}
+\ket\psi
+&=\sum_\alpha s_\alpha
+\underbrace{\left(\sum_iU_{i\alpha}\ket i_L\right)}_{\ket{L_\alpha}}
+\otimes\underbrace{\left(\sum_jV^*_{j\alpha}\ket j_R\right)}_{\ket{R_\alpha}}\\
+&=\sum_{\alpha=1}^r s_\alpha\ket{L_\alpha}\ket{R_\alpha},
+\qquad \sum_\alpha s_\alpha^2=1.
+\end{align}
+The left states are mutually orthonormal, and so are the right states. Each Schmidt term pairs one left state with one right state. The number of nonzero terms is $r=\operatorname{rank}C$.
+
+Each term is a product across this split. Entanglement arises when more than one such term is required in their superposition. The Schmidt rank counts these terms, \emph{not} the number of subsystems.
+
+For a product state,
+\begin{equation}
+\ket\psi=\ket L\ket R
+\quad\Longrightarrow\quad r=1,\qquad (s_1,s_2,\ldots)=(1,0,\ldots).
+\end{equation}
+At this point the state is already Schmidt-decomposed. No MPS tensors are needed to perform the next step: truncation.
+
+\newpage
+\section*{3. What truncation removes}
+Order the singular values from largest to smallest and retain $\chi$ terms:
+\begin{equation}
+\ket{\widetilde\psi_\chi}=\sum_{\alpha=1}^\chi s_\alpha\ket{L_\alpha R_\alpha},
+\qquad
+\ket\psi-\ket{\widetilde\psi_\chi}
+=\sum_{\alpha>\chi}s_\alpha\ket{L_\alpha R_\alpha}.
+\end{equation}
+We remove low-weight Schmidt components. They are not individually ``weakly entangled parts'': each is a product across the split, though its left and right factors may have internal entanglement.
+
+Orthogonality gives the discarded weight and the retained norm:
+\begin{equation}
+w_\chi=\sum_{\alpha>\chi}s_\alpha^2
+=\|\psi-\widetilde\psi_\chi\|^2,
+\qquad \|\widetilde\psi_\chi\|^2=1-w_\chi.
+\end{equation}
+After normalization,
+\begin{equation}
+\ket{\phi_\chi}=\frac{\ket{\widetilde\psi_\chi}}{\sqrt{1-w_\chi}},
+\qquad
+F=|\langle\psi|\phi_\chi\rangle|^2=1-w_\chi.
+\end{equation}
+The retained terms keep their relative amplitudes. Their common rescaling restores total probability one. Truncated SVD gives the closest unnormalized rank-$\chi$ approximation in squared coefficient error.
+
+\subsection*{Schmidt terms need not be individual spin configurations}
+Start with a state in the computational basis:
+\begin{equation}
+\ket\psi=\frac{2\ket{00}+\ket{01}+\ket{10}+2\ket{11}}{\sqrt{10}},
+\qquad C=\frac1{\sqrt{10}}\mtwo{2}{1}{1}{2}.
+\end{equation}
+Its SVD is
+\begin{equation}
+C=\underbrace{\frac1{\sqrt2}\mtwo{1}{1}{1}{-1}}_U
+\underbrace{\mtwo{3/\sqrt{10}}{0}{0}{1/\sqrt{10}}}_{\Sigma}
+\underbrace{\frac1{\sqrt2}\mtwo{1}{1}{1}{-1}}_{V^\dagger}.
+\end{equation}
+Reading off the columns gives the Schmidt decomposition:
+\begin{equation}
+\ket\psi=\frac3{\sqrt{10}}\ket{++}+\frac1{\sqrt{10}}\ket{--},
+\qquad \ket\pm=\frac{\ket0\pm\ket1}{\sqrt2}.
+\end{equation}
+The left factors are orthonormal, as are the right factors, and the coefficients are nonnegative. The term we discard is
+\begin{equation}
+\frac1{\sqrt{10}}\ket{--}
+=\frac{\ket{00}-\ket{01}-\ket{10}+\ket{11}}{2\sqrt{10}}.
+\end{equation}
+It contributes to all four computational-basis amplitudes. Removing it and then normalizing gives
+\begin{equation}
+\frac1{\sqrt{10}}\mtwo{2}{1}{1}{2}
+\xrightarrow{\text{truncate}}
+\frac3{2\sqrt{10}}\mtwo{1}{1}{1}{1}
+\xrightarrow{\text{normalize}}
+\frac12\mtwo{1}{1}{1}{1}.
+\end{equation}
+Normalization divides the retained state by its norm $3/\sqrt{10}$, giving $\ket{++}$. All four basis amplitudes change, but none becomes zero: discarding a Schmidt term need not remove an individual spin configuration.
+
+When the first term dominates, the others can usefully be viewed as corrections to a leading product-state description. When several weights are comparable, no single product captures most of the state. Truncation also changes observables differently: some are insensitive to the removed components, while others depend on them strongly.
+
+\newpage
+\section*{4. Entropy measures the distribution of Schmidt weights}
+Trace over the right subsystem:
+\begin{align}
+\rho_L
+&=\sum_{\alpha\beta}s_\alpha s_\beta\ket{L_\alpha}\bra{L_\beta}
+\langle R_\beta|R_\alpha\rangle\\
+&=\sum_\alpha s_\alpha^2\ket{L_\alpha}\bra{L_\alpha}.
+\end{align}
+Its eigenvalues are $p_\alpha=s_\alpha^2$. The right reduced state has the same nonzero eigenvalues, so the entanglement entropy is
+\begin{equation}
+\boxed{S_L=S_R=-\sum_{\alpha=1}^r s_\alpha^2\log_2(s_\alpha^2).}
+\end{equation}
+Thus the singular values determine both truncation error and entanglement entropy. For a product state,
+\begin{equation}
+(s_1,s_2,\ldots)=(1,0,\ldots)
+\quad\Longrightarrow\quad S=-1\log_2 1=0,
+\end{equation}
+where $0\log_2 0$ contributes zero.
+
+Each $p_\alpha$ lies between zero and one, giving $S\geq0$. For the upper bound, concavity of the logarithm gives
+\begin{equation}
+S=\sum_{\alpha=1}^r p_\alpha\log_2\frac1{p_\alpha}
+\leq\log_2\left(\sum_{\alpha=1}^r p_\alpha\frac1{p_\alpha}\right)
+=\log_2 r.
+\end{equation}
+The upper bound is reached when the nonzero weights are equal:
+\begin{equation}
+s_\alpha=\frac1{\sqrt r}
+\quad\Longrightarrow\quad
+S=-r\frac1r\log_2\frac1r=\log_2r.
+\end{equation}
+Consequently $0\leq S\leq\log_2r$. Zero entropy occurs only for rank one; states of exact rank greater than one can approach zero entropy as all but one weight become small.
+
+For the two-term family,
+\begin{align}
+\ket{\psi_\epsilon}
+&=\sqrt{1-\epsilon}\ket{L_1R_1}+\sqrt\epsilon\ket{L_2R_2},\\
+S&=-(1-\epsilon)\log_2(1-\epsilon)-\epsilon\log_2\epsilon.
+\end{align}
+As $\epsilon\to0$, the state approaches a product and $S\to0$. At $\epsilon=1/2$, the weights are equal and $S=1$ bit. Both states have rank two whenever both weights are nonzero.
+
+Entropy therefore quantifies ``weak'' versus ``strong'' entanglement across a chosen split, without a universal threshold separating the two. Rank counts terms; entropy describes their weight distribution. For a specific truncation, the direct accuracy measure is the tail $w_\chi$, rather than entropy alone.
+
+\newpage
+\section*{5. Repeating the factorization produces an MPS}
+For two spins, the SVD already supplies two factors:
+\begin{equation}
+C=U\Sigma V^\dagger
+=\underbrace{U}_{A^{[1]}}\underbrace{\Sigma V^\dagger}_{A^{[2]}}.
+\end{equation}
+Writing these as MPS tensors mostly repackages the same factorization. For many spins, however, one Schmidt decomposition still leaves large subsystem states. A Schmidt vector on $k$ spins can itself require $2^k$ coefficients.
+
+To factor further, start with three spins and separate the first:
+\begin{align}
+C_{ijk}&\xrightarrow{\text{reshape}}M^{[1]}_{i,(jk)},\\
+M^{[1]}&=U^{[1]}\Sigma^{[1]}V^{[1]\dagger}=A^{[1]}R^{[1]},\\
+C_{ijk}&=\sum_\alpha A^{[1]}_{i\alpha}R^{[1]}_{\alpha,(jk)}.
+\end{align}
+Now regroup the remainder and factor again:
+\begin{align}
+R^{[1]}_{\alpha,(jk)}&\xrightarrow{\text{reshape}}M^{[2]}_{(\alpha j),k},\\
+M^{[2]}&=U^{[2]}\Sigma^{[2]}V^{[2]\dagger},\\
+A^{[2]}_{\alpha j\beta}&=U^{[2]}_{(\alpha j),\beta},\qquad
+A^{[3]}_{\beta k}=(\Sigma^{[2]}V^{[2]\dagger})_{\beta k}.
+\end{align}
+Substitution gives
+\begin{equation}
+\boxed{C_{ijk}=\sum_{\alpha\beta}
+A^{[1]}_{i\alpha}A^{[2]}_{\alpha j\beta}A^{[3]}_{\beta k}.}
+\end{equation}
+The first SVD uses the split $1\,|\,23$; the second uses $12\,|\,3$. Since the columns retained from the first $U$ are orthonormal, the second SVD also gives a Schmidt decomposition across its split. We are moving through successive cuts, not repeatedly decomposing the same pair of subsystems.
+
+Continuing along a chain gives
+\begin{equation}
+C_{i_1\cdots i_N}=\sum_{\alpha_1\cdots\alpha_{N-1}}
+A^{[1]}_{i_1\alpha_1}A^{[2]}_{\alpha_1i_2\alpha_2}\cdots
+A^{[N]}_{\alpha_{N-1}i_N}.
+\end{equation}
+Each tensor has one physical spin index. Each shared bond connects the two sides of a chain split. With zero singular values removed and no truncation, its dimension equals the Schmidt rank across that split.
+
+The resulting tensors encode all the original amplitudes. We can contract them to recover those amplitudes, or compute observables and apply local gates directly to the tensors without building the full coefficient array.
+
+\newpage
+\section*{6. Exact compression and truncation are different}
+At split $k$, let $r_k$ be the exact Schmidt rank and $\chi_k$ the number of terms retained, or bond dimension. Without truncation, $\chi_k=r_k$. The single chosen cap is $\chi_{\max}$; at a given decomposition, retaining only up to this cap means $\chi_k=\min(r_k,\chi_{\max})$. In a sequence of truncations, the ranks refer to the state being decomposed at that step.
+
+The full coefficient array for $N$ spins has $2^N$ entries. Let $P_{\rm MPS}$ count the scalar entries stored in all the MPS tensors. Since
+\begin{equation}
+\operatorname{shape}(A^{[k]})=(\chi_{k-1},2,\chi_k),
+\qquad \chi_0=\chi_N=1,
+\end{equation}
+we have
+\begin{equation}
+P_{\rm MPS}=\sum_{k=1}^N2\chi_{k-1}\chi_k.
+\end{equation}
+If every internal bond is at most $\chi_{\max}$, each end tensor stores at most $2\chi_{\max}$ entries and each interior tensor at most $2\chi_{\max}^2$. Thus
+\begin{equation}
+P_{\rm MPS}\leq4\chi_{\max}+2(N-2)\chi_{\max}^2
+=O(N\chi_{\max}^2)\qquad(N\geq2).
+\end{equation}
+This can be far smaller than $2^N$. No information has been lost if every nonzero singular value is retained: the savings come from storing a factorization of the amplitudes.
+
+A fully product state needs only bonds of dimension one:
+\begin{equation}
+\ket\psi=\bigotimes_{k=1}^N\ket{v_k},\qquad
+\chi_k=1,\qquad P_{\rm MPS}=2N.
+\end{equation}
+For GHZ, each internal Schmidt rank is two:
+\begin{equation}
+\ket{\mathrm{GHZ}_N}=\frac{\ket0^{\otimes N}+\ket1^{\otimes N}}{\sqrt2},
+\qquad P_{\rm MPS}=4+8(N-2)+4=8N-8.
+\end{equation}
+Both are exact descriptions. A generic state instead reaches ranks as large as
+\begin{equation}
+\chi_k=2^{\min(k,N-k)},
+\end{equation}
+so its exact MPS can still require exponentially many entries. Repeated SVD does not guarantee that storage decreases at every step or for every state.
+
+\subsection*{Adding a maximum bond dimension}
+Impose a limit at each split:
+\begin{equation}
+\chi_k\leq\chi_{\max},\qquad
+M^{[k]}=\sum_\alpha s^{[k]}_\alpha u^{[k]}_\alpha v^{[k]\dagger}_\alpha
+\ \longrightarrow\ 
+\widetilde M^{[k]}=\sum_{\alpha=1}^{\chi_k}
+s^{[k]}_\alpha u^{[k]}_\alpha v^{[k]\dagger}_\alpha.
+\end{equation}
+Small nonzero terms are now discarded to keep the representation affordable. Their weights control the error of each truncation. The final state reflects the whole sequence, so the single-cut identity $F=1-w_\chi$ is not automatically the fidelity after truncating every bond.
+
+The dimension counts how many Schmidt components we retain; their sizes determine whether that count is enough. A tiny nonzero weight contributes to the exact rank just as a large one does, but it is much cheaper in accuracy to discard.
+
+Schmidt decomposition already supplies the truncation principle. The MPS extends the factorization along the chain, making it possible to store and manipulate the state through small tensors. Exact factorization preserves information; truncation trades some of that information for smaller bonds.
+\end{document}
