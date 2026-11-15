@@ -273,4 +273,148 @@ A_G^{[1]}A_G^{[2]}=C_G
 \xrightarrow{\text{flatten}}
 \frac1{\sqrt2}\vfour{1}{0}{0}{1}.
 \]
+
+\newpage
+\section*{6. Extend the same update to four spins}
+
+The example stores four tensors in a list:
+\begin{lstlisting}
+n_spins = 4
+tensors = [
+    up.reshape(1, 2, 1).copy()
+    for i in range(n_spins)
+]
+tensors[0] = np.einsum("ij,ajb->aib", H, tensors[0])
+\end{lstlisting}
+Here \texttt{tensors[0]} and \texttt{tensors[1]} correspond
+to \texttt{A1} and \texttt{A2} in the preceding derivation.
+
+The function \texttt{mps\_CNOT} performs the same contraction,
+gate application, reshape, and SVD on one neighboring pair.
+It replaces only those two tensors in the list:
+\begin{lstlisting}
+mps_CNOT(tensors, CNOT, 0, 1)
+mps_CNOT(tensors, CNOT, 1, 2)
+mps_CNOT(tensors, CNOT, 2, 3)
+\end{lstlisting}
+
+The corresponding full-state evolution is
+\begin{align*}
+\ket{0000}
+&\xrightarrow{H_1}
+\frac{\ket{0000}+\ket{1000}}{\sqrt2}\\
+&\xrightarrow{\mathrm{CNOT}_{1\to2}}
+\frac{\ket{0000}+\ket{1100}}{\sqrt2}\\
+&\xrightarrow{\mathrm{CNOT}_{2\to3}}
+\frac{\ket{0000}+\ket{1110}}{\sqrt2}\\
+&\xrightarrow{\mathrm{CNOT}_{3\to4}}
+\frac{\ket{0000}+\ket{1111}}{\sqrt2}
+=\ket{\mathrm{GHZ}_4}.
+\end{align*}
+
+For each updated pair, \texttt{matrix} groups the left bond
+and first spin into a row, and the second spin and right
+bond into a column:
+\[
+M_{(ai),(jc)}=\Theta_{aijc}.
+\]
+For the first update this is the $2\times2$ matrix $C_G$
+derived above. For the second and third updates its shape
+is $4\times2$: the left bond now has dimension two.
+It contains the updated pair's coefficients, with the outer
+bond indices preserving its connection to the rest of the chain.
+
+The tensor shapes progress as
+\begin{align*}
+\text{Initial and after }H_1:\quad&
+(1,2,1),\ (1,2,1),\ (1,2,1),\ (1,2,1),\\
+\text{After CNOT}_{1\to2}:\quad&
+(1,2,2),\ (2,2,1),\ (1,2,1),\ (1,2,1),\\
+\text{After CNOT}_{2\to3}:\quad&
+(1,2,2),\ (2,2,2),\ (2,2,1),\ (1,2,1),\\
+\text{After CNOT}_{3\to4}:\quad&
+(1,2,2),\ (2,2,2),\ (2,2,2),\ (2,2,1).
+\end{align*}
+The final MPS is the complete list of four tensors.
+Every internal bond has dimension two, although the
+entanglement now extends across all four spins.
+
+\section*{Extension: truncation during evolution}
+
+Example 10 compares exact evolution, one initial truncation,
+and repeated truncation. At a chosen bond, retain the largest
+$\chi$ Schmidt coefficients and normalize:
+\[
+\sum_{\alpha=1}^{r}s_\alpha\ket{L_\alpha R_\alpha}
+\longrightarrow
+\frac{\sum_{\alpha=1}^{\chi}s_\alpha\ket{L_\alpha R_\alpha}}
+{\sqrt{1-w}},
+\qquad
+w=\sum_{\alpha>\chi}s_\alpha^2.
+\]
+
+After a single truncation, identical unitary evolution preserves
+fidelity:
+\[
+|\langle U\psi|U\phi\rangle|^2
+=|\langle\psi|\phi\rangle|^2.
+\]
+Nevertheless, local observable errors can change and bond
+dimensions can regrow, removing the initial storage advantage.
+
+\subsection*{Results at each checkpoint}
+
+Let $t=0$ denote the initial truncation. Checkpoints $t=1,2,3$
+follow the subsequent rotation--CNOT operations on pairs
+$(1,2)$, $(2,3)$, and $(3,4)$, respectively, and the repeated
+run's truncation. All three runs have undergone the same
+unitary gates at each checkpoint.
+
+\begin{center}
+\begin{tabular}{c|ccc|ccc}
+\hline
+& \multicolumn{3}{c|}{Fidelity with reference}
+& \multicolumn{3}{c}{Stored MPS entries}\\
+$t$ & Reference & Once & Repeated
+    & Reference & Once & Repeated\\
+\hline
+0 & 1 & 0.9 & 0.9    & 12 &  8 & 8\\
+1 & 1 & 0.9 & 0.81   & 12 & 12 & 8\\
+2 & 1 & 0.9 & 0.784  & 18 & 18 & 8\\
+3 & 1 & 0.9 & 0.7056 & 24 & 24 & 8\\
+\hline
+\end{tabular}
+\end{center}
+
+The local observables are listed in spin order:
+$\langle\mathbf Z\rangle
+=(\langle Z_1\rangle,\langle Z_2\rangle,
+  \langle Z_3\rangle,\langle Z_4\rangle)$.
+
+\begin{center}
+\begin{tabular}{c|ccc}
+\hline
+$t$ & Reference & Once & Repeated\\
+\hline
+0 & $(0.8,0.8,1,1)$
+  & $(1,1,1,1)$
+  & $(1,1,1,1)$\\
+1 & $(0.64,0.8,1,1)$
+  & $(0.8,0.8,1,1)$
+  & $(1,1,1,1)$\\
+2 & $(0.64,0.64,0.64,1)$
+  & $(0.8,0.64,0.64,1)$
+  & $(1,1,1,1)$\\
+3 & $(0.64,0.64,0.512,0.512)$
+  & $(0.8,0.64,0.512,0.512)$
+  & $(1,1,1,1)$\\
+\hline
+\end{tabular}
+\end{center}
+
+The once-truncated run retains constant fidelity while its
+local errors change and its storage regrows. Repeated
+truncation keeps the state at $\ket{0000}$ at these checkpoints,
+maintaining small storage while departing further from the
+reference.
 \end{document}
